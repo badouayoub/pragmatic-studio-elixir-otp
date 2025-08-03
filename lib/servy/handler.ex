@@ -1,11 +1,47 @@
 defmodule Servy.Handler do
+  require Logger
+
   def handle(request) do
     request
     |> parse
+    |> rewrite_path
     |> log
     |> route
+    |> emojify
+    |> track
     |> format_response
   end
+
+  defp emojify(%{status: 200, resp_body: resp_body} = conv) do
+    %{conv | resp_body: "🎉 #{resp_body} 🎉"}
+  end
+
+  defp emojify(conv), do: conv
+
+  def track(%{status: 404, path: path} = conv) do
+    Logger.warning("#{path} is on the loose!")
+    conv
+  end
+
+  def track(conv), do: conv
+
+  def rewrite_path(%{path: "/wildlife"} = conv) do
+    %{conv | path: "/wildthings"}
+  end
+
+  def rewrite_path(%{path: path} = conv) do
+    captures =
+      ~r{\/(?<thing>\w+)\?id=(?<id>\d+)}
+      |> Regex.named_captures(path)
+
+    rewrite_path_captures(conv, captures)
+  end
+
+  def rewrite_path_captures(conv, %{"thing" => thing, "id" => id}) do
+    %{conv | path: "/#{thing}/#{id}"}
+  end
+
+  def rewrite_path_captures(conv, nil), do: conv
 
   def log(conv), do: IO.inspect(conv)
 
@@ -19,31 +55,23 @@ defmodule Servy.Handler do
     %{method: method, path: path, resp_body: "", status: nil}
   end
 
-  def route(conv) do
-    route(conv, conv.method, conv.path)
-  end
-
-  # TODO: Pattern matching map
-  # Pattern match on map route(%{method: "GET", path: "/wildthings"} = conv)
-  # Will be done in module 8
-  def route(conv, "GET", "/wildthings") do
+  def route(%{method: "GET", path: "/wildthings"} = conv) do
     %{conv | status: 200, resp_body: "Bears, Lions, Tigers"}
   end
 
-  def route(conv, "GET", "/bears") do
+  def route(%{method: "GET", path: "/bears"} = conv) do
     %{conv | status: 200, resp_body: "Rachid, Hmida, Bibich"}
   end
 
-  def route(conv, "GET", "/bears/" <> id) do
+  def route(%{method: "GET", path: "/bears/" <> id} = conv) do
     %{conv | status: 200, resp_body: "Bear #{id}"}
   end
 
-  def route(conv, "DELETE", "/bears/" <> _id) do
+  def route(%{method: "DELETE", path: "/bears/" <> _id} = conv) do
     %{conv | status: 403, resp_body: "Deleting a bear is forbidden!"}
   end
 
-  # Catch all route ie Error
-  def route(conv, _method, path) do
+  def route(%{path: path} = conv) do
     %{conv | status: 404, resp_body: "No #{path} here!"}
   end
 
@@ -115,6 +143,28 @@ IO.puts(response)
 
 request = """
 DELETE /bears/1 HTTP/1.1
+Host: example.com
+User-Agent: ExampleBrowser/1.0
+Accept: */*
+
+"""
+
+response = Servy.Handler.handle(request)
+IO.puts(response)
+
+request = """
+GET /wildlife HTTP/1.1
+Host: example.com
+User-Agent: ExampleBrowser/1.0
+Accept: */*
+
+"""
+
+response = Servy.Handler.handle(request)
+IO.puts(response)
+
+request = """
+GET /tigers?id=42 HTTP/1.1
 Host: example.com
 User-Agent: ExampleBrowser/1.0
 Accept: */*
