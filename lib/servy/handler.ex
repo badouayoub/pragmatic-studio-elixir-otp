@@ -7,16 +7,16 @@ defmodule Servy.Handler do
     |> rewrite_path
     |> log
     |> route
-    |> emojify
+    # |> emojify
     |> track
     |> format_response
   end
 
-  defp emojify(%{status: 200, resp_body: resp_body} = conv) do
-    %{conv | resp_body: "🎉 #{resp_body} 🎉"}
-  end
-
-  defp emojify(conv), do: conv
+  # defp emojify(%{status: 200, resp_body: resp_body} = conv) do
+  #   %{conv | resp_body: "🎉 #{resp_body} 🎉"}
+  # end
+  #
+  # defp emojify(conv), do: conv
 
   def track(%{status: 404, path: path} = conv) do
     Logger.warning("#{path} is on the loose!")
@@ -71,9 +71,38 @@ defmodule Servy.Handler do
     %{conv | status: 403, resp_body: "Deleting a bear is forbidden!"}
   end
 
+  def route(%{method: "GET", path: "/about"} = conv) do
+    Path.expand("../../pages/", __DIR__)
+    |> Path.join("about.html")
+    |> File.read()
+    |> handle_file(conv)
+  end
+
+  def route(%{method: "GET", path: "/wolf/new"} = conv) do
+    Path.expand("../../pages/", __DIR__)
+    |> Path.join("form.html")
+    |> File.read()
+    |> handle_file(conv)
+  end
+
+  def route(%{method: "GET", path: "/pages/" <> page} = conv) do
+    Path.expand("../../pages/", __DIR__)
+    |> Path.join("#{page}.html")
+    |> File.read()
+    |> handle_file(conv)
+  end
+
   def route(%{path: path} = conv) do
     %{conv | status: 404, resp_body: "No #{path} here!"}
   end
+
+  def handle_file({:ok, content}, conv), do: %{conv | status: 200, resp_body: content}
+
+  def handle_file({:error, :eneont}, conv),
+    do: %{conv | status: 500, resp_body: "File not found!"}
+
+  def handle_file({:error, reason}, conv),
+    do: %{conv | status: 500, resp_body: "File error: #{reason}"}
 
   def format_response(conv) do
     """
@@ -165,6 +194,28 @@ IO.puts(response)
 
 request = """
 GET /tigers?id=42 HTTP/1.1
+Host: example.com
+User-Agent: ExampleBrowser/1.0
+Accept: */*
+
+"""
+
+response = Servy.Handler.handle(request)
+IO.puts(response)
+
+request = """
+GET /about HTTP/1.1
+Host: example.com
+User-Agent: ExampleBrowser/1.0
+Accept: */*
+
+"""
+
+response = Servy.Handler.handle(request)
+IO.puts(response)
+
+request = """
+GET /wolf/new HTTP/1.1
 Host: example.com
 User-Agent: ExampleBrowser/1.0
 Accept: */*
