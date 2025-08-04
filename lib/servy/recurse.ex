@@ -26,8 +26,15 @@ defmodule Recurse do
   end
 
   defp triple_tail_opti([], current_list), do: current_list |> Enum.reverse()
+
+  def my_map([head | tail], function) do
+    [function.(head) | my_map(tail, function)]
+  end
+
+  def my_map([], _function), do: []
 end
 
 Recurse.sum([1, 2, 3, 4, 5, 5], 0) |> IO.puts()
 Recurse.triple([1, 2, 3, 4, 5, 5]) |> IO.inspect()
 Recurse.triple_tail_opti([1, 2, 3, 4, 5, 5]) |> IO.inspect()
+Recurse.my_map([1, 2, 3, 4, 5, 5], &(&1 * 2)) |> IO.inspect()

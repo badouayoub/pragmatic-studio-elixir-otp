@@ -8,21 +8,29 @@ defmodule Servy.Parser do
 
     [method, path, _] = String.split(request_line, " ")
 
-    headers = parse_headers(header_lines, %{})
+    headers = parse_headers(header_lines)
 
     params = parse_params(headers["Content-Type"], params_string)
 
     %Conv{method: method, path: path, params: params, headers: headers}
   end
 
-  defp parse_headers([head | tail], headers) do
-    [key, value] = String.split(head, ": ")
-    headers = Map.put(headers, key, value)
+  # Recursivly Parsing headers
+  # defp parse_headers([head | tail], headers) do
+  #   [key, value] = String.split(head, ": ")
+  #   headers = Map.put(headers, key, value)
+  #
+  #   parse_headers(tail, headers)
+  # end
+  #
+  # defp parse_headers([], headers), do: headers
 
-    parse_headers(tail, headers)
+  def parse_headers(header_lines) do
+    Enum.reduce(header_lines, %{}, fn header, accumulator ->
+      [key, value] = String.split(header, ": ")
+      Map.put(accumulator, key, value)
+    end)
   end
-
-  defp parse_headers([], headers), do: headers
 
   defp parse_params("application/x-www-form-urlencoded", params_string) do
     params_string |> String.trim() |> URI.decode_query()
