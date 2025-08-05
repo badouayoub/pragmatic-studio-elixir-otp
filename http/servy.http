@@ -1,0 +1,5 @@
+### GET Bears HTML
+GET localhost:5678/bears
+
+### GET Bears JSON
+GET localhost:5678/api/bears
