@@ -3,3 +3,7 @@ GET localhost:5678/bears
 
 ### GET Bears JSON
 GET localhost:5678/api/bears
+
+
+### GET /kaboom Raise Exception
+GET localhost:5678/kaboom
