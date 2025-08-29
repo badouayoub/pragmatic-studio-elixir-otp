@@ -9,3 +9,6 @@ GET localhost:5678/kaboom
 
 ### hibernating 10s
 GET localhost:5678/hibernate/10000
+
+### GET snapshot
+GET localhost:5678/snapshots

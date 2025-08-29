@@ -1,5 +1,4 @@
 defmodule HttpServerTest do
-  alias Servy.HttpServer
   use ExUnit.Case
 
   alias Servy.HttpServer
@@ -9,22 +8,23 @@ defmodule HttpServerTest do
     port = 5678
     spawn(HttpServer, :start, [port])
 
-    request = """
-    GET /wildthings HTTP/1.1\r
-    Host: example.com\r
-    User-Agent: ExampleBrowser/1.0\r
-    Accept: */*\r
-    \r
-    """
+    parent = self()
+    max_concurrent_requests = 5
 
-    response = HttpClient.send(request, port)
+    for _ <- 1..max_concurrent_requests do
+      spawn(fn ->
+        {:ok, response} = HTTPoison.get("localhost:" <> Integer.to_string(port) <> "/wildthings")
 
-    assert response == """
-           HTTP/1.1 200 OK\r
-           Content-Type: text/html\r
-           Content-Length: 20\r
-           \r
-           Bears, Lions, Tigers
-           """
+        send(parent, {:ok, response})
+      end)
+    end
+
+    for _ <- 1..max_concurrent_requests do
+      receive do
+        {:ok, response} ->
+          assert response.status_code == 200
+          assert response.body == "Bears, Lions, Tigers"
+      end
+    end
   end
 end
